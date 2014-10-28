@@ -29,9 +29,20 @@ runM c m = left showE <$> try (runReaderT m c) where
   showE :: SomeException -> String
   showE = show
 
+-- throw an error if a path contains any ".." components, to prevent
+-- accessing files we shouldn't. The administrator is responsible for
+-- not creating other links to directories we shouldn't access.
+-- Alternative: use System.FilePath.Canonical.canonicalFilePath to
+-- check if we left cgroup_root.
+sanitize :: FilePath -> M ()
+sanitize p = when (any (== "..") $ splitDirectories p) $
+             fail "\"..\" not allowed in paths"
+
 -- filesystem path of a cgroup
 path :: FilePath -> M FilePath
-path cg = (++ ("/" ++ cg)) . cgroup_root <$> ask
+path cg = do
+  sanitize cg
+  (++ ("/" ++ cg)) . cgroup_root <$> ask
 
 -- filesystem path of the tasks file for a cgroup
 tasks :: FilePath -> M FilePath
