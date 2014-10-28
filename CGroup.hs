@@ -55,7 +55,7 @@ createCGroup cg = path cg >>= liftIO . createDirectory
 
 -- place a process into a cgroup
 movePID :: PID -> FilePath -> CM ()
-movePID pid cg = tasks cg >>= liftIO . flip writeFile (show pid)
+movePID pid cg = tasks cg >>= liftIO . flip writeFile (show pid ++ "\n")
 
 listPIDs :: String -> CM [Integer]
 listPIDs cg = tasks cg >>= liftIO . fmap (map read . lines) . readFile
