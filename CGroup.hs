@@ -7,6 +7,7 @@ import Control.Arrow
 import Control.Exception
 import Control.Monad.Reader
 import System.Directory
+import System.FilePath
 
 -- process ID
 type PID = Integer
