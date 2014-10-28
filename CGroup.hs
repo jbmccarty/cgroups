@@ -50,13 +50,17 @@ tasks :: FilePath -> CM FilePath
 tasks cg = (++ "/tasks") <$> path cg
 
 -- create a cgroup
+-- Sanity check: is the parent directory a cgroup?
 createCGroup :: FilePath -> CM ()
 createCGroup cg = path cg >>= liftIO . createDirectory
 
 -- place a process into a cgroup
+-- Sanity check: is cg actually a cgroup?
 movePID :: PID -> FilePath -> CM ()
 movePID pid cg = tasks cg >>= liftIO . flip writeFile (show pid ++ "\n")
 
+-- list the pids in a cgroup
+-- Sanity check: is cg actually a cgroup?
 listPIDs :: String -> CM [Integer]
 listPIDs cg = tasks cg >>= liftIO . fmap (map read . lines) . readFile
 
