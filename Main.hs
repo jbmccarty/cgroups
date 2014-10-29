@@ -35,6 +35,17 @@ config = Config "/sys/fs/cgroup"
 invalid :: String -> Error
 invalid s = (400, "Invalid Request", [s])
 
+-- check if the request method is allowed; throw a 405 error if not
+checkMethod :: (MonadError Error m, MonadCGI m) => [String] -> m String
+checkMethod ss = do
+  method <- requestMethod
+  if any (== method) ss then return method else do
+    let methods = intercalate ", " ss
+    setHeader "Allow" methods
+    throwError (405, "Method Not Allowed",
+                ["Method " ++ method ++ " not allowed",
+                 "Allowed methods: " ++ methods])
+
 -- get the value of a parameter, returning a 400 error if it's not present
 getValue :: (MonadError Error m, MonadCGI m) => String -> m String
 getValue s = getInput s >>=
@@ -72,16 +83,27 @@ processRequest :: CGI CGIResult
 -- here we use ExceptT for early-out behavior, and ReaderT to pass the
 -- cgroup root location.
 processRequest = handleOutput . flip runReaderT config $ do
+  -- accept OPTIONS?
   cmd <- getValue "command"
   case cmd of
-    "createcgroup" -> getValue "cgroup" >>= createCGroup >> outputNothing
+    "createcgroup" -> do
+      checkMethod ["POST"]
+      getValue "cgroup" >>= createCGroup >> outputNothing
+      -- return 201 Created?
     "movepid"  -> do
+      checkMethod ["POST"]
       pid <- readValue "pid"
       cg <- getValue "cgroup"
       movePID pid cg
       outputNothing
-    "listpids" -> getValue "cgroup" >>= listPIDs >>=
-                  output . (++ "\n") . intercalate " " . map show
+    "listpids" -> do
+      method <- checkMethod ["GET", "HEAD"]
+      res <- getValue "cgroup" >>= listPIDs
+      if method == "HEAD"
+      then outputNothing
+      else do
+        setHeader "Content-type" "text/plain"
+        output . (++ "\n") . intercalate " " . map show $ res
     _ -> throwError . invalid $ "Invalid command: " ++ cmd
 
 -- check output for error codes and client-caused exceptions (remaining
