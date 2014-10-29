@@ -60,6 +60,8 @@ movePID pid cg = tasks cg >>= liftIO . flip writeFile (show pid ++ "\n")
 -- Sanity check: is cg actually a cgroup?
 listPIDs :: (MonadReader Config m, MonadIO m) => FilePath -> m [Integer]
 listPIDs cg = tasks cg >>= liftIO . fmap (map read . lines) . readFile
+-- this returns a 500 error if read fails, but that's arguably correct
+-- as the file should only contain numbers
 
 {- Not implemented, but it wouldn't be too difficult:
  - creating/deleting a hierarchy attached to given controllers
