@@ -18,6 +18,9 @@ Valid parameters and values:
   name of the cgroup to list. Only HEAD and GET are allowed. A
   space-separated list of pids is returned in the response.
 
+Required Haskell packages:
+  mtl, directory, deepseq, exceptions, fastcgi (and libfcgi-dev installed)
+
 Caveats:
   1. Creating a new cgroup doesn't set cpuset.cpus and cpuset.mems,
      which makes it impossible to move tasks into it. That is, "movepid"
