@@ -4,6 +4,7 @@
 module CGroup where
 import Control.Applicative
 import Control.Arrow
+import Control.DeepSeq
 import Control.Exception
 import Control.Monad.Reader
 import System.Directory
@@ -23,12 +24,15 @@ type CM a = ReaderT Config IO a
 
 -- extract the value from the monad, converting any exceptions to
 -- strings
--- Perhaps we should only catch certain exceptions so as not to hide
--- programming errors.
-runCM :: Config -> CM a -> IO (Either String a)
-runCM c m = left showE <$> try (runReaderT m c) where
-  showE :: SomeException -> String
-  showE = show
+runCM :: NFData a => Config -> CM a -> IO (Either String a)
+runCM c m = left show <$> tryE r where
+  r = do
+    res <- runReaderT m c
+    deepseq res $ return res
+    -- laziness makes preventing exceptions from escaping the monad
+    -- tricky: we need to force everything that gets returned
+  tryE :: IO a -> IO (Either SomeException a) -- for type inference
+  tryE = try
 
 -- throw an error if a path contains any ".." components, to prevent
 -- accessing files we shouldn't. The administrator is responsible for
