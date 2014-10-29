@@ -2,13 +2,15 @@
 -- reported as strings.
 
 module CGroup where
-import Control.Applicative
-import Control.Arrow
-import Control.DeepSeq
-import Control.Exception
-import Control.Monad.Reader
-import System.Directory
-import System.FilePath
+import Control.Applicative ((<$>))
+import Control.Arrow (left)
+import Control.DeepSeq (NFData, deepseq)
+import Control.Exception (try, SomeException)
+import Control.Monad (when)
+import Control.Monad.IO.Class (liftIO)
+import Control.Monad.Reader (ReaderT, runReaderT, ask)
+import System.Directory (createDirectory)
+import System.FilePath (splitDirectories)
 
 -- process ID
 type PID = Integer
