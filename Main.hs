@@ -1,40 +1,27 @@
 {-# LANGUAGE FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, TypeSynonymInstances #-}
 import CGroup
-import Control.Applicative
-import Control.Monad ((<=<))
 import Control.Monad.Except
-import Control.Monad.Trans.Maybe
 import Control.Monad.Reader
 import Data.List (intercalate)
 import Network.FastCGI
 import Network.CGI.Monad
 import Control.DeepSeq
 
--- an error consists of a return code and a message
+-- an error consists of a return code and some messages
 type Error = (Int, String, [String])
 
--- customized ExceptT to make "fail" produce a 400 error
-newtype ET m a = ET { unET :: ExceptT Error m a }
-  deriving (Applicative, Functor, MonadIO, MonadError Error, MonadTrans)
+-- missing instances for monad transformers
+instance MonadCGI m => MonadCGI (ExceptT e m) where
+  cgiAddHeader n s = lift $ cgiAddHeader n s
+  cgiGet = lift . cgiGet
 
-runET :: ET m a -> m (Either Error a)
-runET = runExceptT . unET
-
-instance Monad m => Monad (ET m) where
-  return = ET . return
-  x >>= f = ET $ unET x >>= unET . f
-  fail s = ET $ invalid s
-
-instance MonadCGI m => MonadCGI (ET m) where
+instance MonadCGI m => MonadCGI (ReaderT r m) where
   cgiAddHeader n s = lift $ cgiAddHeader n s
   cgiGet = lift . cgiGet
 
 -- root of the cgroup filesystem; change if necessary
 config :: Config
 config = Config "/sys/fs/cgroup"
-
-runCG :: ReaderT Config m a -> m a
-runCG = flip runReaderT config
 
 -- produce a 400 Invalid Request response
 invalid :: MonadError Error m => String -> m a
@@ -73,9 +60,9 @@ Valid parameters and values:
   space-separated list of pids is returned in the response.
 -}
 process_request :: CGI CGIResult
--- here we use MaybeT to make pattern match failures result in Nothing,
--- and ExceptT for early-out behavior
-process_request = handle_output . runET $ do
+-- here we use ExceptT for early-out behavior, and ReaderT to pass the
+-- cgroup root location.
+process_request = handle_output . runExceptT . flip runReaderT config $ do
   -- the non-exhaustive pattern matching here is intentional: any
   -- invalid command syntax results in a pattern match failure, which
   -- gets interpreted as a 400 invalid request
@@ -83,17 +70,17 @@ process_request = handle_output . runET $ do
   case cmd of
     "createcgroup" -> do
       cg <- getValue "cgroup"
-      res <- runCG $ createCGroup cg
+      res <- createCGroup cg
       deepseq res $ outputNothing
       -- check res for errors
     "movepid"  -> do
       pid <- readValue "pid"
       cg <- getValue "cgroup"
-      res <- runCG $ movePID pid cg
+      res <- movePID pid cg
       deepseq res $ outputNothing
     "listpids" -> do
       cg <- getValue "cgroup"
-      res <- runCG $ listPIDs cg
+      res <- listPIDs cg
       -- check res for errors
       let res' = (++ "\n") . intercalate " " . map show $ res
       deepseq res' $ output res'

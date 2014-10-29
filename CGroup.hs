@@ -1,8 +1,10 @@
 -- This module uses the filesystem to manipulate cgroups.
 
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DeriveDataTypeable, FlexibleContexts #-}
 module CGroup (PID, Config(..), createCGroup, movePID, listPIDs) where
 import Control.Monad.Reader
+import Control.Exception (Exception, throw)
+import Data.Typeable (Typeable)
 import System.Directory (createDirectory)
 import System.FilePath (splitDirectories)
 
@@ -20,6 +22,10 @@ data Config = Config {
                           -- shouldn't end in "/"
 }
 
+-- exception for an invalid path
+data PathError = PathError FilePath deriving (Typeable, Show)
+instance Exception PathError
+
 -- throw an error if a path contains any ".." components, to prevent
 -- accessing files we shouldn't. The administrator is responsible for
 -- not creating other links to directories we shouldn't access.
@@ -27,7 +33,7 @@ data Config = Config {
 -- check if we left cgroup_root.
 sanitize :: MonadReader Config m => FilePath -> m ()
 sanitize p = when (any (== "..") $ splitDirectories p) $
-             fail "\"..\" not allowed in paths"
+             throw $ PathError p
 
 -- filesystem path of a cgroup
 path :: MonadReader Config m => FilePath -> m FilePath
