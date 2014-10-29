@@ -1,38 +1,84 @@
 import CGroup
 import Control.Applicative ((<$>))
 import Control.Monad ((<=<))
+import Control.Monad.Except
+import Control.Monad.Trans.Maybe
+import Control.Monad.Reader
 import Data.List (intercalate)
+import Network.FastCGI
+import Network.CGI.Monad
+import Control.DeepSeq
+
+-- an error consists of a return code and a message
+type Error = (Int, String)
+
+-- missing monad transformer instances to eliminate unneccesary "lift"s
+instance MonadCGI m => MonadCGI (ExceptT e m) where
+  cgiAddHeader n s = lift $ cgiAddHeader n s
+  cgiGet = lift . cgiGet
+
+instance MonadCGI m => MonadCGI (MaybeT m) where
+  cgiAddHeader n s = lift $ cgiAddHeader n s
+  cgiGet = lift . cgiGet
 
 -- root of the cgroup filesystem; change if necessary
 config :: Config
 config = Config "/sys/fs/cgroup"
 
-{- process a single request, and return the response.
+runCG :: ReaderT Config m a -> m a
+runCG = flip runReaderT config
 
-Input requests consist of space-separated words, the first of which is
-CREATECG, MOVEPID, or LISTPIDS, and the rest of which are arguments for
-the request.
+{- process a single request, and output the response.
 
-Output responses consist of either "OK " followed by space-separated
-responses to the request, or "ERROR " followed by an error message.
+Valid parameters and values:
+  The "command" parameter specifies the action to take. Its value can be
+  "createcg", "movepid", or "listpids".
 
-The argument to CREATECG is the name of a control group; there is no
-response.
+  For "createcg", there must be a parameter "cgroup", whose value is the
+  name of the cgroup to create. Only POST is allowed.
 
-The arguments to MOVEPID are a numeric process ID and the name of a
-control group; there is no response.
+  For "movepid", there must be a parameter "pid" whose value is the pid
+  to move, and "cgroup", whose value is the name of the cgroup to move
+  it into. Only POST is allowed.
 
-The argument to LISTPIDS is the name of a control group; the response is
-a set of PIDs.
+  For "listpids", there must be a parameter "cgroup", whose value is the
+  name of the cgroup to list. Only HEAD and GET are allowed. A
+  space-separated list of pids is returned in the response.
 -}
-process_request :: String -> IO String
-process_request r = either ("ERROR " ++) ("OK " ++) <$>
-                    (runCM config . pr . words) r
+process_request :: CGI CGIResult
+-- here we use MaybeT to make pattern match failures result in Nothing,
+-- and ExceptT for early-out behavior
+process_request = handle_output . runMaybeT . runExceptT $ do
+  -- the non-exhaustive pattern matching here is intentional: any
+  -- invalid command syntax results in a pattern match failure, which
+  -- gets interpreted as a 400 invalid request
+  Just cmd <- getInput "command"
+  case cmd of
+    "createcgroup" -> do
+      Just cg <- getInput "cgroup"
+      res <- runCG $ createCGroup cg
+      deepseq res $ outputNothing
+      -- check res for errors
+    "movepid"  -> do
+      Just pid <- readInput "pid"
+      Just cg <- getInput "cgroup"
+      res <- runCG $ movePID pid cg
+      deepseq res $ outputNothing
+    "listpids" -> do
+      Just cg <- getInput "cgroup"
+      res <- runCG $ listPIDs cg
+      -- check res for errors
+      let res' = (++ "\n") . intercalate " " . map show $ res
+      deepseq res' $ output res'
+    _ -> fail ""
+
+-- check output for error codes (remaining exceptions are caught by
+-- handleErrors below and result in a 500 Internal Server Error)
+handle_output :: CGI (Maybe (Either Error CGIResult)) -> CGI CGIResult
+handle_output r = r >>= either h return
+                        . maybe (Left (400, "Invalid request")) id
   where
-    pr ["CREATECG", cg] = createCGroup cg >> return ""
-    pr ["MOVEPID", pid, cg] = movePID (read pid) cg >> return ""
-    pr ["LISTPIDS", cg] = intercalate " " . map show <$> listPIDs cg
-    pr _ = fail "unrecognized command or invalid arguments"
+    h (c, e) = outputError c e []
 
 main :: IO ()
-main = getContents >>= mapM_ (putStrLn <=< process_request) . lines
+main = runFastCGIorCGI $ handleErrors process_request
