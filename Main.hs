@@ -62,23 +62,7 @@ readValue s = do
     [(v', "")] -> return v'
     _ -> throwError . invalid $ "Invalid value for " ++ s ++ ": " ++ s'
 
-{- process a single request, and output the response.
-
-Valid parameters and values:
-  The "command" parameter specifies the action to take. Its value can be
-  "createcg", "movepid", or "listpids".
-
-  For "createcg", there must be a parameter "cgroup", whose value is the
-  name of the cgroup to create. Only POST is allowed.
-
-  For "movepid", there must be a parameter "pid" whose value is the pid
-  to move, and "cgroup", whose value is the name of the cgroup to move
-  it into. Only POST is allowed.
-
-  For "listpids", there must be a parameter "cgroup", whose value is the
-  name of the cgroup to list. Only HEAD and GET are allowed. A
-  space-separated list of pids is returned in the response.
--}
+-- process a single request, and output the response.
 processRequest :: CGI CGIResult
 -- here we use ExceptT for early-out behavior, and ReaderT to pass the
 -- cgroup root location.
