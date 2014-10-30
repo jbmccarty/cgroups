@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleContexts, ScopedTypeVariables #-}
-import CGroup
+import CGroups
 import Control.DeepSeq
 import Control.Exception (IOException)
 import Control.Monad.Catch (handle)
