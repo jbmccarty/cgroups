@@ -59,7 +59,7 @@ movePID pid cg = tasks cg >>= liftIO . flip writeFile (show pid ++ "\n")
 -- list the pids in a cgroup
 -- Sanity check: is cg actually a cgroup?
 listPIDs :: (MonadReader Config m, MonadIO m) => FilePath -> m [Integer]
-listPIDs cg = tasks cg >>= liftIO . fmap (map read . lines) . readFile
+listPIDs cg = tasks cg >>= liftIO . fmap (map read . words) . readFile
 -- this returns a 500 error if read fails, but that's arguably correct
 -- as the file should only contain numbers
 

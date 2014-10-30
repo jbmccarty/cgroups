@@ -68,6 +68,9 @@ processRequest :: CGI CGIResult
 -- cgroup root location.
 processRequest = handleOutput . flip runReaderT config $ do
   -- accept OPTIONS?
+  setHeader "Content-Type" "text/plain"
+  -- mod_fastcgi doesn't like empty responses, so at least give it a
+  -- header in all cases
   cmd <- getValue "command"
   case cmd of
     "createcgroup" -> do
@@ -83,8 +86,7 @@ processRequest = handleOutput . flip runReaderT config $ do
     "listpids" -> do
       method <- checkMethod ["GET", "HEAD"]
       res <- getValue "cgroup" >>= listPIDs
-      if method == "HEAD" then outputNothing else do
-        setHeader "Content-type" "text/plain"
+      if method == "HEAD" then deepseq res outputNothing else do
         output . (++ "\n") . intercalate " " . map show $ res
     _ -> throwError . invalid $ "Invalid command: " ++ cmd
 
