@@ -83,9 +83,7 @@ processRequest = handleOutput . flip runReaderT config $ do
     "listpids" -> do
       method <- checkMethod ["GET", "HEAD"]
       res <- getValue "cgroup" >>= listPIDs
-      if method == "HEAD"
-      then outputNothing
-      else do
+      if method == "HEAD" then outputNothing else do
         setHeader "Content-type" "text/plain"
         output . (++ "\n") . intercalate " " . map show $ res
     _ -> throwError . invalid $ "Invalid command: " ++ cmd
