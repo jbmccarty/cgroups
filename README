@@ -43,5 +43,5 @@ Caveats:
      server instead of this program, although doing it in the program
      would allow finer-grained control.
 
-Tested as CGI and FastCGI under Apache 2.4.10 on Debian, using mod_cgid
-and mod_fastcgi.
+Tested as CGI and FastCGI under Apache 2.4.10 on Debian, using mod_cgid,
+mod_fcgid, and mod_fastcgi.
