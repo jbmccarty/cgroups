@@ -31,15 +31,14 @@ Caveats:
      cgroup filesystem. As a CGI module, Apache runs it as "www-data"
      (at least on Debian), so probably you would want to do something
      like
-       chown cgroup:www-data cgroup-server
-       chmod 4750 cgroup-server
-     assuming the cgroup filesystem is owned by the user "cgroup" and
-     the binary is called "cgroup-server". Running the program as
-     FastCGI may make this unnecessary depending on how you start it.
-     Related to this, "createcgroup" can create directories that aren't
-     cgroups, if the argument isn't underneath an existing cgroup
-     hierarchy. This could be prevented through permissions, or by
-     additional checks in the program.
+       chown cgroup:www-data ./cgroups
+       chmod 4750 ./cgroups
+     assuming the cgroup filesystem is owned by the user "cgroup".
+     Running the program as FastCGI may make this unnecessary depending
+     on how you start it. Related to this, "createcgroup" can create
+     directories that aren't cgroups, if the argument isn't underneath
+     an existing cgroup hierarchy. This could be prevented through
+     permissions, or by additional checks in the program.
   3. No authentication is performed. This could probably be done in the
      server instead of this program, although doing it in the program
      would allow finer-grained control.

@@ -1,0 +1,12 @@
+Name:          cgroups
+Version:       0.1
+Cabal-Version: >= 1.2
+Author:        Jason McCarty
+Category:      Application Server, Linux, Web
+Synopsis:      A CGI/FastCGI module to manipulate cgroups on Linux
+
+Executable cgroups
+  Main-Is:       Main.hs
+  Build-Depends: base, cgi, deepseq, directory, exceptions, fastcgi,
+                 filepath, mtl
+  Other-Modules: CGroups
