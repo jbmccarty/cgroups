@@ -1,8 +1,8 @@
 -- This module uses the filesystem to manipulate cgroups.
 
 {-# LANGUAGE DeriveDataTypeable, FlexibleContexts #-}
-module CGroup (PathException(..), PID, Config(..), createCGroup, movePID,
-  listPIDs) where
+module CGroups (PathException(..), PID, Config(..), createCGroup,
+  movePID, listPIDs) where
 import Control.Monad.Reader
 import Control.Exception (Exception, throw)
 import Data.Typeable (Typeable)
