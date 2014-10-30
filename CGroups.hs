@@ -1,4 +1,5 @@
--- This module uses the filesystem to manipulate cgroups.
+-- Module for manipulating Linux cgroups via the filesystem.
+-- Copyright 2014 Jason McCarty
 
 {-# LANGUAGE DeriveDataTypeable, FlexibleContexts #-}
 module CGroups (PathException(..), PID, Config(..), createCGroup,

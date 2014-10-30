@@ -1,4 +1,5 @@
 Haskell CGI/FastCGI program for manipulating Linux cgroups.
+Copyright 2014 Jason McCarty.
 
 You need to set the variable "config" in Main.hs to the root of your
 cgroup filesystem.

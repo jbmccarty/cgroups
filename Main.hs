@@ -1,3 +1,6 @@
+-- CGI/FastCGI module for manipulating Linux cgroups.
+-- Copyright 2014 Jason McCarty
+
 {-# LANGUAGE FlexibleContexts, ScopedTypeVariables #-}
 import CGroups
 import Control.DeepSeq

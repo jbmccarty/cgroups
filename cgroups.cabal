@@ -2,6 +2,7 @@ Name:          cgroups
 Version:       0.1
 Cabal-Version: >= 1.2
 Author:        Jason McCarty
+Copyright:     Copyright 2014 Jason McCarty
 Category:      Application Server, Linux, Web
 Synopsis:      A CGI/FastCGI module to manipulate cgroups on Linux
 
