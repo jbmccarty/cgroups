@@ -8,7 +8,7 @@ import Control.Monad.Reader
 import Control.Exception (Exception, throw)
 import Data.Typeable (Typeable)
 import System.Directory (createDirectory)
-import System.FilePath (splitDirectories)
+import System.FilePath (splitDirectories, (</>))
 
 -- not necessary once Applicative becomes a superclass of Monad
 (<$>) :: Monad m => (a -> b) -> m a -> m b
@@ -39,13 +39,11 @@ sanitize p = when (".." `elem` splitDirectories p) $
 
 -- filesystem path of a cgroup
 path :: MonadReader Config m => FilePath -> m FilePath
-path cg = do
-  sanitize cg
-  (++ ("/" ++ cg)) . cgroupRoot <$> ask
+path cg = sanitize cg >> (</> cg) . cgroupRoot <$> ask
 
 -- filesystem path of the tasks file for a cgroup
 tasks :: MonadReader Config m => FilePath -> m FilePath
-tasks cg = (++ "/tasks") <$> path cg
+tasks cg = (</> "tasks") <$> path cg
 
 -- create a cgroup
 -- Sanity check: is the parent directory a cgroup?

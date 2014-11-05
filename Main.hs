@@ -40,10 +40,10 @@ invalid s = (400, "Invalid Request", [s])
 
 -- check if the request method is allowed; throw a 405 error if not
 checkMethod :: (MonadError Error m, MonadCGI m) => [String] -> m String
-checkMethod ss = do
+checkMethod ms = do
   method <- requestMethod
-  if method `elem` ss then return method else do
-    let methods = intercalate ", " ss
+  if method `elem` ms then return method else do
+    let methods = intercalate ", " ms
     setHeader "Allow" methods
     throwError (405, "Method Not Allowed",
                 ["Method " ++ method ++ " not allowed",
@@ -89,8 +89,9 @@ processRequest = handleOutput . flip runReaderT config $ do
     "listpids" -> do
       method <- checkMethod ["GET", "HEAD"]
       res <- getValue "cgroup" >>= listPIDs
-      if method == "HEAD" then deepseq res outputNothing else do
-        output . (++ "\n") . unwords . map show $ res
+      if method == "HEAD"
+        then deepseq res outputNothing -- prevent hidden exceptions
+        else output . (++ "\n") . unwords . map show $ res
     _ -> throwError . invalid $ "Invalid command: " ++ cmd
 
 -- check output for error codes and client-caused exceptions (remaining
@@ -98,7 +99,7 @@ processRequest = handleOutput . flip runReaderT config $ do
 -- Internal Server Error)
 handleOutput :: ExceptT Error (CGIT IO) CGIResult -> CGI CGIResult
 handleOutput r = handleExceptions (runExceptT r) >>=
-                 either handleEither return
+                 either handleError return
   where
     -- convert exceptions to Left values to prevent them escaping in a
     -- thunk (even if they were already Left values)
@@ -113,7 +114,7 @@ handleOutput r = handleExceptions (runExceptT r) >>=
       "\"..\" not allowed as a path component: " ++ p
 
     -- finally convert any errors to output
-    handleEither (c, e, es) = outputError c e es
+    handleError (c, e, es) = outputError c e es
 
 main :: IO ()
 main = runFastCGIorCGI $ handleErrors processRequest
