@@ -42,7 +42,7 @@ invalid s = (400, "Invalid Request", [s])
 checkMethod :: (MonadError Error m, MonadCGI m) => [String] -> m String
 checkMethod ss = do
   method <- requestMethod
-  if any (== method) ss then return method else do
+  if method `elem` ss then return method else do
     let methods = intercalate ", " ss
     setHeader "Allow" methods
     throwError (405, "Method Not Allowed",
@@ -90,7 +90,7 @@ processRequest = handleOutput . flip runReaderT config $ do
       method <- checkMethod ["GET", "HEAD"]
       res <- getValue "cgroup" >>= listPIDs
       if method == "HEAD" then deepseq res outputNothing else do
-        output . (++ "\n") . intercalate " " . map show $ res
+        output . (++ "\n") . unwords . map show $ res
     _ -> throwError . invalid $ "Invalid command: " ++ cmd
 
 -- check output for error codes and client-caused exceptions (remaining

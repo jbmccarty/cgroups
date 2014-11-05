@@ -19,29 +19,29 @@ infixl 4 <$>
 type PID = Integer
 
 -- configuration data
-data Config = Config {
-  cgroup_root :: FilePath -- root of the cgroup filesystem;
+newtype Config = Config {
+  cgroupRoot :: FilePath -- root of the cgroup filesystem;
                           -- shouldn't end in "/"
 }
 
 -- exception for an invalid path
-data PathException = PathException FilePath deriving (Typeable, Show)
+newtype PathException = PathException FilePath deriving (Typeable, Show)
 instance Exception PathException
 
 -- throw an error if a path contains any ".." components, to prevent
 -- accessing files we shouldn't. The administrator is responsible for
 -- not creating other links to directories we shouldn't access.
 -- Alternative: use System.FilePath.Canonical.canonicalFilePath to
--- check if we left cgroup_root.
+-- check if we left cgroupRoot.
 sanitize :: MonadReader Config m => FilePath -> m ()
-sanitize p = when (any (== "..") $ splitDirectories p) $
+sanitize p = when (".." `elem` splitDirectories p) $
              throw $ PathException p
 
 -- filesystem path of a cgroup
 path :: MonadReader Config m => FilePath -> m FilePath
 path cg = do
   sanitize cg
-  (++ ("/" ++ cg)) . cgroup_root <$> ask
+  (++ ("/" ++ cg)) . cgroupRoot <$> ask
 
 -- filesystem path of the tasks file for a cgroup
 tasks :: MonadReader Config m => FilePath -> m FilePath
